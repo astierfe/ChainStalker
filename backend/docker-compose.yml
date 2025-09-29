@@ -1,0 +1,124 @@
+# backend/docker-compose.yml - v1.1
+
+services:
+  # Flask API
+  flask-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: chainstaker-api
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_ENV=development
+      - MONGODB_URI=mongodb://mongodb:27017/chainstaker
+      - REDIS_URL=redis://redis:6379/0
+    env_file:
+      - .env
+    volumes:
+      - ./app:/app/app
+      - ./logs:/app/logs
+    depends_on:
+      - mongodb
+      - redis
+    networks:
+      - chainstaker-network
+    command: python -m flask run --host=0.0.0.0
+
+  # MongoDB
+  mongodb:
+    image: mongo:7.0
+    container_name: chainstaker-mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+      - ./mongo-init:/docker-entrypoint-initdb.d
+    environment:
+      - MONGO_INITDB_DATABASE=chainstaker
+    networks:
+      - chainstaker-network
+
+  # Redis
+  redis:
+    image: redis:7.2-alpine
+    container_name: chainstaker-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - chainstaker-network
+    command: redis-server --appendonly yes
+
+  # Celery Worker
+  celery-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: chainstaker-celery-worker
+    environment:
+      - MONGODB_URI=mongodb://mongodb:27017/chainstaker
+      - REDIS_URL=redis://redis:6379/0
+    env_file:
+      - .env
+    volumes:
+      - ./app:/app/app
+      - ./logs:/app/logs
+    depends_on:
+      - mongodb
+      - redis
+    networks:
+      - chainstaker-network
+    command: celery -A app.tasks.celery_app worker --loglevel=info
+
+  # Celery Beat (scheduler)
+  celery-beat:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: chainstaker-celery-beat
+    environment:
+      - MONGODB_URI=mongodb://mongodb:27017/chainstaker
+      - REDIS_URL=redis://redis:6379/0
+    env_file:
+      - .env
+    volumes:
+      - ./app:/app/app
+      - ./logs:/app/logs
+    depends_on:
+      - mongodb
+      - redis
+      - celery-worker
+    networks:
+      - chainstaker-network
+    command: celery -A app.tasks.celery_app beat --loglevel=info
+
+  # Blockchain Event Listener
+  blockchain-listener:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: chainstaker-listener
+    environment:
+      - MONGODB_URI=mongodb://mongodb:27017/chainstaker
+      - REDIS_URL=redis://redis:6379/0
+    env_file:
+      - .env
+    volumes:
+      - ./app:/app/app
+      - ./logs:/app/logs
+    depends_on:
+      - mongodb
+    networks:
+      - chainstaker-network
+    command: python -m app.services.blockchain_listener
+    restart: unless-stopped
+
+volumes:
+  mongodb_data:
+  redis_data:
+
+networks:
+  chainstaker-network:
+    driver: bridge

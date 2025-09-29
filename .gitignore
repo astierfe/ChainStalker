@@ -1,0 +1,26 @@
+# Environment variables
+.env
+*.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Dependencies
+node_modules/
+
+# Foundry dependencies" >> .gitignore
+contracts/lib/
+contracts/cache/
+contracts/out/
+contracts/broadcast/

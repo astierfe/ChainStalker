@@ -1,0 +1,29 @@
+# backend/requirements.txt - v1.0
+
+# Flask & API
+Flask==3.0.0
+Flask-CORS==4.0.0
+gunicorn==21.2.0
+
+# Web3 & Blockchain
+web3==6.11.3
+eth-account==0.10.0
+
+# Database
+pymongo==4.6.1
+motor==3.3.2
+
+# Task Queue
+celery==5.3.4
+redis==5.0.1
+
+# Environment & Config
+python-dotenv==1.0.0
+
+# Utilities
+requests==2.31.0
+python-dateutil==2.8.2
+
+# Development
+pytest==7.4.3
+pytest-asyncio==0.21.1

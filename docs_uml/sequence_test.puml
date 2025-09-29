@@ -1,0 +1,61 @@
+@startuml
+!theme mars
+
+actor "Foundry Test" as Test
+participant "Owner\n(address 1)" as Owner
+participant "MockDAI" as DAI
+participant "StakingPool" as Pool
+participant "User1\n(address 2)" as User1
+participant "User2\n(address 3)" as User2
+
+== setUp() - Préparation ==
+Test -> Owner: vm.startPrank(owner)
+activate Owner
+
+Owner -> DAI: new MockDAI()
+activate DAI
+DAI -> DAI: mint(owner, 1M DAI)
+DAI --> Owner: deployed
+deactivate DAI
+
+Owner -> Pool: new StakingPool(dai, 500)
+activate Pool
+Pool -> Pool: validate params\nset baseAPY = 500
+Pool --> Owner: deployed
+deactivate Pool
+
+Owner -> DAI: mint(user1, 10k DAI)
+activate DAI
+DAI --> Owner: success
+deactivate DAI
+
+Owner -> DAI: mint(user2, 10k DAI)
+activate DAI
+DAI --> Owner: success
+deactivate DAI
+
+Test -> Owner: vm.stopPrank()
+deactivate Owner
+
+== testInitialState() - Vérifications ==
+Test -> Pool: daiToken()
+activate Pool
+Pool --> Test: address(dai)
+deactivate Pool
+Test -> Test: assertEq(address, address(dai))
+
+Test -> Pool: baseAPY()
+activate Pool
+Pool --> Test: 500
+deactivate Pool
+Test -> Test: assertEq(500, 500)
+
+Test -> Pool: totalStaked()
+activate Pool
+Pool --> Test: 0
+deactivate Pool
+Test -> Test: assertEq(0, 0)
+
+note over Test: ✅ Test passed
+
+@enduml

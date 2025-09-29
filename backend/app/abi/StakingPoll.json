@@ -1,0 +1,102 @@
+[
+  {
+    "anonymous": false,
+    "inputs": [
+      {"indexed": true, "name": "user", "type": "address"},
+      {"indexed": true, "name": "stakeIndex", "type": "uint256"},
+      {"indexed": false, "name": "amount", "type": "uint256"},
+      {"indexed": false, "name": "tierId", "type": "uint8"},
+      {"indexed": false, "name": "timestamp", "type": "uint256"}
+    ],
+    "name": "StakeCreated",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {"indexed": true, "name": "user", "type": "address"},
+      {"indexed": true, "name": "stakeIndex", "type": "uint256"},
+      {"indexed": false, "name": "amount", "type": "uint256"},
+      {"indexed": false, "name": "rewards", "type": "uint256"}
+    ],
+    "name": "Unstaked",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {"indexed": true, "name": "user", "type": "address"},
+      {"indexed": true, "name": "stakeIndex", "type": "uint256"},
+      {"indexed": false, "name": "rewards", "type": "uint256"}
+    ],
+    "name": "RewardsClaimed",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {"indexed": true, "name": "user", "type": "address"},
+      {"indexed": true, "name": "stakeIndex", "type": "uint256"},
+      {"indexed": false, "name": "amount", "type": "uint256"}
+    ],
+    "name": "EmergencyWithdraw",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {"indexed": true, "name": "funder", "type": "address"},
+      {"indexed": false, "name": "amount", "type": "uint256"}
+    ],
+    "name": "RewardPoolFunded",
+    "type": "event"
+  },
+  {
+    "inputs": [
+      {"name": "amount", "type": "uint256"},
+      {"name": "tierId", "type": "uint8"}
+    ],
+    "name": "stake",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [{"name": "stakeIndex", "type": "uint256"}],
+    "name": "unstake",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [{"name": "stakeIndex", "type": "uint256"}],
+    "name": "claimRewards",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {"name": "user", "type": "address"},
+      {"name": "stakeIndex", "type": "uint256"}
+    ],
+    "name": "calculateRewards",
+    "outputs": [{"name": "", "type": "uint256"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "totalStaked",
+    "outputs": [{"name": "", "type": "uint256"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "rewardPoolBalance",
+    "outputs": [{"name": "", "type": "uint256"}],
+    "stateMutability": "view",
+    "type": "function"
+  }
+]

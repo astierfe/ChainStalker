@@ -1,0 +1,56 @@
+@startuml
+!theme mars
+
+node "Client Browser" {
+    [Next.js App] as frontend
+}
+
+cloud "Blockchain Network" {
+    [Ethereum/Sepolia\nRPC Node] as rpc
+    [Smart Contracts\nStaking Logic] as contracts
+}
+
+node "Docker Host" {
+    
+    rectangle "API Container" {
+        [Flask API\n:5000] as api
+    }
+    
+    rectangle "Worker Container" {
+        [Celery Worker\n+ Beat Scheduler] as worker
+    }
+    
+    rectangle "Cache Container" {
+        database "Redis\n:6379" as redis
+    }
+    
+    rectangle "Database Container" {
+        database "MongoDB\n:27017" as mongo
+    }
+    
+    rectangle "Monitoring Container" {
+        [Prometheus\n+ Grafana] as monitor
+    }
+}
+
+cloud "External Services" {
+    [Chainlink Oracles\nPrice Feeds] as oracle
+    [SendGrid/Firebase\nNotifications] as notif
+}
+
+' Connexions
+frontend --> api : HTTPS/REST
+frontend --> rpc : Web3 RPC
+api --> redis : Cache/Queue
+api --> mongo : Data Storage
+worker --> redis : Consume Jobs
+worker --> mongo : Update Metrics
+worker --> rpc : Read Stakes
+worker --> oracle : Fetch Data
+worker --> notif : Send Alerts
+monitor ..> api : Scrape /metrics
+monitor ..> worker : Logs
+monitor ..> mongo : Health Check
+rpc --> contracts : Transactions
+
+@enduml
