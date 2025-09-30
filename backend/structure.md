@@ -1,4 +1,4 @@
-# Structure Backend - v1.2
+# Structure Backend - v1.3
 
 ```
 backend/
@@ -17,9 +17,9 @@ backend/
 │   │   └── notifications.py        ⏳ Étape 2.5
 │   ├── api/
 │   │   ├── __init__.py             📝 Créer (vide)
-│   │   ├── users.py                ✅ Créé (minimal)
-│   │   ├── stakes.py               ✅ Créé (minimal)
-│   │   └── analytics.py            ✅ Créé (minimal)
+│   │   ├── users.py                ✅ Complété (Étape 2.3)
+│   │   ├── stakes.py               ✅ Complété (Étape 2.3)
+│   │   └── analytics.py            ✅ Complété (Étape 2.3)
 │   ├── tasks/
 │   │   ├── __init__.py             📝 Créer (vide)
 │   │   ├── celery_app.py           ⏳ Étape 2.4
@@ -40,46 +40,55 @@ backend/
 ├── .env                            📝 Copier depuis .env.example
 ├── .gitignore                      ✅ Créé
 ├── run.py                          ✅ Créé
+├── API_DOCS.md                     ✅ Créé (Étape 2.3)
 └── README.md                       📝 À créer (optionnel)
 ```
 
-## Commandes Setup
+## API Endpoints Status
+
+### Users API ✅
+- `GET /api/users` - List users (pagination)
+- `GET /api/users/<address>` - User details
+- `GET /api/users/<address>/stakes` - User stakes (with filter)
+
+### Stakes API ✅
+- `GET /api/stakes` - List stakes (pagination + filters)
+- `GET /api/stakes/<address>/<index>` - Stake details
+- `GET /api/stakes/active` - Active stakes only
+- `GET /api/stakes/stats` - Statistics by status/tier
+
+### Analytics API ✅
+- `GET /api/analytics` - Complete dashboard
+- `GET /api/analytics/tvl` - Total Value Locked
+- `GET /api/analytics/users` - User statistics
+- `GET /api/analytics/tiers` - Tier distribution
+- `GET /api/analytics/contract` - On-chain contract data
+
+## Test API
 
 ```bash
-# Créer structure (si pas déjà fait)
-mkdir -p app/{models,services,api,tasks,utils,abi} logs mongo-init
+# Restart Flask API to load new endpoints
+docker-compose restart flask-api
 
-# Créer __init__.py vides (si pas déjà fait)
-touch app/services/__init__.py
-touch app/api/__init__.py
-touch app/tasks/__init__.py
-touch app/utils/__init__.py
+# Test health
+curl http://localhost:5000/health
 
-# Copier .env (si pas déjà fait)
-cp .env.example .env
+# Test analytics (most comprehensive)
+curl http://localhost:5000/api/analytics | jq
 
-# IMPORTANT: Modifier .env avec vraies valeurs
-# - STAKING_POOL_ADDRESS
-# - DAI_TOKEN_ADDRESS
-# - RPC_URL si différent
-nano .env
+# Test users
+curl http://localhost:5000/api/users | jq
 
-# Rebuild avec nouveau service listener
-docker-compose up --build -d
+# Test stakes with filters
+curl "http://localhost:5000/api/stakes?status=active&limit=10" | jq
 
-# Vérifier logs
-docker-compose logs -f blockchain-listener
+# Test contract data (requires blockchain connection)
+curl http://localhost:5000/api/analytics/contract | jq
 ```
 
-## Test Event Listener
+## Next: Étape 2.4 - Celery Workers
 
-```bash
-# Vérifier connexion RPC
-docker-compose exec blockchain-listener python -c "from app.utils.web3_utils import web3_manager; print(f'Connected: {web3_manager.w3.is_connected()}')"
-
-# Voir events capturés
-docker-compose exec mongodb mongosh chainstaker --eval "db.raw_events.find().limit(5)"
-
-# Voir stakes créés
-docker-compose exec mongodb mongosh chainstaker --eval "db.stakes.find().limit(5)"
-```
+Create periodic tasks for:
+- Analytics calculations (APY, TVL trends)
+- Cache warming
+- Metrics aggregation

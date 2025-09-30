@@ -11,6 +11,7 @@ ChainStaker is a community-driven staking platform built on Ethereum that allows
 - **Flexible Rewards**: Claim anytime or compound into existing stakes
 - **Early Withdrawal**: Available with penalty based on tier
 - **Protocol Fees**: Configurable fee collection on rewards
+- **Real-time Analytics**: Historical metrics and live dashboard
 - **Emergency Mode**: Safe withdrawal during contract pause
 
 ## 📊 Project Status
@@ -24,21 +25,21 @@ ChainStaker is a community-driven staking platform built on Ethereum that allows
 
 **Location**: `contracts/`
 
-### 🚧 Phase 2: Python Backend (IN PROGRESS)
+### ✅ Phase 2: Python Backend (COMPLETED)
 - ✅ Docker Compose infrastructure (6 services)
-- ✅ Blockchain event listener (Web3.py)
-- ✅ MongoDB models (users, stakes)
-- ✅ Flask API skeleton
-- ⏳ REST API endpoints (users, stakes, analytics)
-- ⏳ Celery workers for periodic analytics
-- ⏳ Notification system
+- ✅ Blockchain event listener (Web3.py) - captures 5 event types
+- ✅ MongoDB models (users, stakes, metrics)
+- ✅ REST API (14 endpoints for users/stakes/analytics)
+- ✅ Celery workers with 6 scheduled tasks
+- ✅ Historical metrics with time-series storage
+- ✅ Analytics: TVL, APY, tier distribution, top users
 
 **Location**: `backend/`
 
 ### 📅 Phase 3: Frontend (PLANNED)
 - Next.js + TypeScript
 - wagmi + RainbowKit for wallet connection
-- Real-time dashboard with analytics
+- Real-time dashboard with analytics charts
 - User profile and stake management
 
 **Location**: `frontend/` (coming soon)
@@ -70,6 +71,7 @@ ChainStaker is a community-driven staking platform built on Ethereum that allows
 - Docker Desktop
 - Foundry (for contracts)
 - Node.js 18+ (for frontend - Phase 3)
+- MongoDB Compass (optional, for database visualization)
 
 ### 1. Smart Contracts
 ```bash
@@ -84,8 +86,11 @@ forge script script/DeployLocal.s.sol --rpc-url http://127.0.0.1:8545 --broadcas
 ```bash
 cd backend
 cp .env.example .env
-# Edit .env with your contract addresses
+# Edit .env with your contract addresses from deployment
 docker-compose up -d
+
+# Verify services
+docker-compose ps
 docker-compose logs -f blockchain-listener
 ```
 
@@ -94,26 +99,32 @@ docker-compose logs -f blockchain-listener
 # Check Flask API
 curl http://localhost:5000/health
 
-# Check MongoDB data
-docker-compose exec mongodb mongosh chainstaker --eval "db.stakes.find().limit(5)"
+# Check analytics
+curl http://localhost:5000/api/analytics | jq
+
+# View metrics in MongoDB Compass
+# Connect to: mongodb://localhost:27017/chainstaker
 ```
 
 ## 📁 Repository Structure
 
 ```
 ChainStaker/
-├── contracts/          # Solidity smart contracts
+├── contracts/          # Solidity smart contracts (Phase 1 ✅)
 │   ├── src/
 │   ├── test/
 │   └── script/
-├── backend/            # Python backend
+├── backend/            # Python backend (Phase 2 ✅)
 │   ├── app/
-│   │   ├── api/       # REST endpoints
-│   │   ├── models/    # MongoDB schemas
-│   │   ├── services/  # Blockchain listener, analytics
-│   │   └── tasks/     # Celery workers
-│   └── docker-compose.yml
-└── frontend/           # Next.js app (Phase 3)
+│   │   ├── api/       # REST endpoints (14 routes)
+│   │   ├── models/    # MongoDB schemas (User, Stake, Metric)
+│   │   ├── services/  # Blockchain listener
+│   │   ├── tasks/     # Celery workers (6 scheduled tasks)
+│   │   └── utils/     # Web3 utilities
+│   ├── docker-compose.yml
+│   ├── API_DOCS.md
+│   └── CELERY_TASKS.md
+└── frontend/           # Next.js app (Phase 3 📅)
 ```
 
 ## 🔗 Deployed Contracts
@@ -125,14 +136,46 @@ ChainStaker/
 **Sepolia Testnet**
 - Coming soon
 
+## 📈 Backend Features
+
+### Event Listener
+- Captures 5 blockchain events: StakeCreated, Unstaked, RewardsClaimed, EmergencyWithdraw, RewardPoolFunded
+- Stores in MongoDB with full transaction history
+- Auto-resume from last processed block after restart
+
+### REST API (14 Endpoints)
+- Users: List, details, user stakes
+- Stakes: List with filters, details, stats
+- Analytics: TVL, users, tiers, contract data, historical metrics
+
+### Celery Tasks (6 Scheduled)
+- `snapshot_tvl`: Every 5 minutes
+- `snapshot_users`: Every 5 minutes
+- `snapshot_tier_distribution`: Every 10 minutes
+- `snapshot_top_users`: Every 15 minutes
+- `calculate_effective_apy`: Every 15 minutes
+- `cleanup_old_metrics`: Daily at 3 AM UTC
+
+### Metrics Time-Series
+- Historical data for charting
+- API endpoint: `GET /api/analytics/history?type=tvl&hours=24`
+- Supported types: tvl, users, tier_distribution, top_users, effective_apy
+
 ## 📝 Next Steps
 
-1. Complete REST API endpoints (GET /stakes, /users, /analytics)
-2. Implement Celery analytics tasks (APY calculations, TVL tracking)
-3. Add notification system (stake milestones, APY boosts)
-4. Build Next.js frontend with wallet integration
+1. ✅ ~~Complete Phase 2 Backend~~ **DONE!**
+2. Build Next.js frontend with wallet integration
+3. Integrate charts for historical metrics (Recharts)
+4. Add notification system (WebSocket or Server-Sent Events)
 5. Deploy to Sepolia testnet
-6. Comprehensive testing and security audit
+6. Comprehensive E2E testing
+7. Security audit
+
+## 📚 Documentation
+
+- [API Documentation](backend/API_DOCS.md) - REST endpoints and examples
+- [Celery Tasks](backend/CELERY_TASKS.md) - Scheduled tasks and monitoring
+- [Backend Structure](backend/STRUCTURE.md) - File organization
 
 ## 📄 License
 

@@ -2,6 +2,9 @@
 from flask import Flask
 from flask_cors import CORS
 from app.config import config
+from app.tasks.celery_app import celery_app
+
+__all__ = ['celery_app']
 
 def create_app():
     app = Flask(__name__)

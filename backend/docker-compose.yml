@@ -13,6 +13,7 @@ services:
       - FLASK_ENV=development
       - MONGODB_URI=mongodb://mongodb:27017/chainstaker
       - REDIS_URL=redis://redis:6379/0
+      - PYTHONPATH=/app
     env_file:
       - .env
     volumes:
@@ -60,6 +61,7 @@ services:
     environment:
       - MONGODB_URI=mongodb://mongodb:27017/chainstaker
       - REDIS_URL=redis://redis:6379/0
+      - PYTHONPATH=/app
     env_file:
       - .env
     volumes:
@@ -81,6 +83,7 @@ services:
     environment:
       - MONGODB_URI=mongodb://mongodb:27017/chainstaker
       - REDIS_URL=redis://redis:6379/0
+      - PYTHONPATH=/app
     env_file:
       - .env
     volumes:
@@ -103,6 +106,7 @@ services:
     environment:
       - MONGODB_URI=mongodb://mongodb:27017/chainstaker
       - REDIS_URL=redis://redis:6379/0
+      - PYTHONPATH=/app
     env_file:
       - .env
     volumes:
