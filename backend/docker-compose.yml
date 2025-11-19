@@ -15,7 +15,7 @@ services:
       - REDIS_URL=redis://redis:6379/0
       - PYTHONPATH=/app
     env_file:
-      - .env
+      - ../.env
     volumes:
       - ./app:/app/app
       - ./logs:/app/logs
@@ -63,7 +63,7 @@ services:
       - REDIS_URL=redis://redis:6379/0
       - PYTHONPATH=/app
     env_file:
-      - .env
+      - ../.env
     volumes:
       - ./app:/app/app
       - ./logs:/app/logs
@@ -85,7 +85,7 @@ services:
       - REDIS_URL=redis://redis:6379/0
       - PYTHONPATH=/app
     env_file:
-      - .env
+      - ../.env
     volumes:
       - ./app:/app/app
       - ./logs:/app/logs
@@ -108,7 +108,7 @@ services:
       - REDIS_URL=redis://redis:6379/0
       - PYTHONPATH=/app
     env_file:
-      - .env
+      - ../.env
     volumes:
       - ./app:/app/app
       - ./logs:/app/logs

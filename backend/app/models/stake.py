@@ -5,21 +5,24 @@ from app.models import stakes_collection
 class Stake:
     @staticmethod
     def create(event_data):
+        # Convert uint256 values - store as int if within MongoDB int64 range, else as string
+        amount = int(event_data['amount'])
+
         stake_data = {
             'user_address': event_data['user'].lower(),
-            'stake_index': event_data['stakeIndex'],
-            'amount': event_data['amount'],
-            'tier_id': event_data['tierId'],
-            'start_time': event_data['timestamp'],
-            'last_reward_claim': event_data['timestamp'],
+            'stake_index': int(event_data['stakeIndex']),
+            'amount': amount if -2**63 <= amount < 2**63 else str(amount),
+            'tier_id': int(event_data['tierId']),
+            'start_time': int(event_data['timestamp']),
+            'last_reward_claim': int(event_data['timestamp']),
             'status': 'active',
             'total_rewards_claimed': 0,
             'tx_hash': event_data['transactionHash'].hex(),
-            'block_number': event_data['blockNumber'],
+            'block_number': int(event_data['blockNumber']),
             'created_at': datetime.utcnow(),
             'updated_at': datetime.utcnow()
         }
-        
+
         stakes_collection.insert_one(stake_data)
         return stake_data
     

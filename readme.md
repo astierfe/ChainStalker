@@ -73,20 +73,36 @@ ChainStaker is a community-driven staking platform built on Ethereum that allows
 - Node.js 18+ (for frontend - Phase 3)
 - MongoDB Compass (optional, for database visualization)
 
-### 1. Smart Contracts
+### 1. Setup Environment
+```bash
+# Copy and configure environment variables
+cp .env.example .env
+# The .env.example contains all necessary variables with default values
+```
+
+### 2. Smart Contracts
 ```bash
 cd contracts
 forge install
 forge test
-anvil  # Start local blockchain
-forge script script/DeployLocal.s.sol --rpc-url http://127.0.0.1:8545 --broadcast
+
+# Terminal 1: Start local blockchain (keep this running)
+anvil
+
+# Terminal 2: Deploy contracts
+forge script script/Deploy.s.sol --rpc-url http://127.0.0.1:8545 --broadcast
+
+# Copy the deployed addresses from output to .env:
+# STAKING_POOL_ADDRESS=0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512
+# DAI_TOKEN_ADDRESS=0x5FbDB2315678afecb367f032d93F642f64180aa3
 ```
 
-### 2. Backend
+### 3. Backend
 ```bash
+# Copy updated .env to backend directory
+cp .env backend/.env
+
 cd backend
-cp .env.example .env
-# Edit .env with your contract addresses from deployment
 docker-compose up -d
 
 # Verify services
@@ -94,7 +110,22 @@ docker-compose ps
 docker-compose logs -f blockchain-listener
 ```
 
-### 3. Verify Setup
+### 4. Frontend (Next.js)
+```bash
+# Setup frontend environment
+cd frontend
+cp .env.example .env.local
+# Edit .env.local with your deployed contract addresses
+
+# Install dependencies (if not already done)
+npm install
+
+# Start development server
+npm run dev
+# Open http://localhost:3000
+```
+
+### 5. Verify Setup
 ```bash
 # Check Flask API
 curl http://localhost:5000/health
@@ -104,6 +135,9 @@ curl http://localhost:5000/api/analytics | jq
 
 # View metrics in MongoDB Compass
 # Connect to: mongodb://localhost:27017/chainstaker
+
+# Frontend should be accessible at:
+# http://localhost:3000
 ```
 
 ## 📁 Repository Structure
@@ -130,8 +164,8 @@ ChainStaker/
 ## 🔗 Deployed Contracts
 
 **Anvil (Local)**
-- StakingPool: `0x5FbDB2315678afecb367f032d93F642f64180aa3`
-- MockDAI: `0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512`
+- StakingPool: `0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512`
+- MockDAI: `0x5FbDB2315678afecb367f032d93F642f64180aa3`
 
 **Sepolia Testnet**
 - Coming soon

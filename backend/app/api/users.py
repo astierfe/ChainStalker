@@ -50,15 +50,20 @@ def get_user_stakes(address):
     try:
         if not address.startswith('0x') or len(address) != 42:
             return jsonify({'error': 'Invalid address format'}), 400
-        
+
         status = request.args.get('status')
-        
+
         user = User.get_by_address(address)
+        # Return empty stakes array if user doesn't exist yet (hasn't interacted with contract)
         if not user:
-            return jsonify({'error': 'User not found'}), 404
-        
+            return jsonify({
+                'user_address': address.lower(),
+                'stakes': [],
+                'total': 0
+            }), 200
+
         stakes = Stake.get_by_user(address, status=status)
-        
+
         return jsonify({
             'user_address': address.lower(),
             'stakes': [_format_stake(s) for s in stakes],

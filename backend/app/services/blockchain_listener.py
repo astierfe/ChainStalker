@@ -102,12 +102,24 @@ class BlockchainListener:
         logger.info(f"RewardPoolFunded: funder={args['funder']}, amount={args['amount']}")
     
     def store_raw_event(self, event):
+        # Convert all values to MongoDB-compatible types
+        args_dict = {}
+        for key, value in event['args'].items():
+            # Handle all possible web3.py types
+            if hasattr(value, 'hex'):  # bytes-like
+                args_dict[key] = value.hex() if value else None
+            elif isinstance(value, int):
+                # Ensure int fits in MongoDB int64 range
+                args_dict[key] = int(value) if -2**63 <= value < 2**63 else str(value)
+            else:
+                args_dict[key] = str(value)
+
         event_data = {
             'event_name': event['event'],
-            'transaction_hash': event['transactionHash'].hex(),
-            'block_number': event['blockNumber'],
-            'log_index': event['logIndex'],
-            'args': dict(event['args']),
+            'transaction_hash': event['transactionHash'].hex() if hasattr(event['transactionHash'], 'hex') else str(event['transactionHash']),
+            'block_number': int(event['blockNumber']),
+            'log_index': int(event['logIndex']),
+            'args': args_dict,
             'processed_at': datetime.utcnow()
         }
         self.events_collection.insert_one(event_data)

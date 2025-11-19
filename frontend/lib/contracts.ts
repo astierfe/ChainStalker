@@ -208,4 +208,17 @@ export const STAKING_POOL_ABI = [
     stateMutability: 'view',
     type: 'function',
   },
+  // Admin functions
+  {
+    inputs: [
+      { name: 'tierId', type: 'uint8' },
+      { name: 'minDuration', type: 'uint256' },
+      { name: 'apy', type: 'uint256' },
+      { name: 'earlyWithdrawPenalty', type: 'uint256' },
+    ],
+    name: 'updateTier',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
 ] as const;

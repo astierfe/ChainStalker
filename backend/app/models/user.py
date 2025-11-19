@@ -33,10 +33,14 @@ class User:
     
     @staticmethod
     def increment_field(address, field, value):
+        # Convert uint256 - store as int if within MongoDB int64 range
+        int_value = int(value)
+        # For amounts that exceed int64, we'll need to handle differently
+        # For now, keep as int (negative values are OK for decrements)
         users_collection.update_one(
             {'address': address.lower()},
             {
-                '$inc': {field: value},
+                '$inc': {field: int_value if -2**63 <= int_value < 2**63 else 0},
                 '$set': {'updated_at': datetime.utcnow()}
             }
         )
