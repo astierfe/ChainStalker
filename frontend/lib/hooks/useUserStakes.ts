@@ -39,7 +39,7 @@ export function useUserStakesFromAPI(
       return data.stakes as Stake[];
     },
     enabled: !!address,
-    refetchInterval: 10000, // Refetch every 10 seconds
+    refetchInterval: 3000, // Reduced from 10s to 3s for faster UI updates after transactions
   });
 }
 

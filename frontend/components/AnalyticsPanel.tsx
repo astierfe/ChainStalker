@@ -77,7 +77,7 @@ export function AnalyticsPanel() {
                 <div className="text-sm text-gray-400">{tier.tier_name}</div>
                 <div className="text-2xl font-bold mt-1">{tier.stake_count}</div>
                 <div className="text-sm text-gray-400 mt-1">
-                  {tier.total_staked} DAI total
+                  {tier.total_staked_formatted || `${tier.total_staked} DAI`} total
                 </div>
               </div>
             ))}

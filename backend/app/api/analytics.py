@@ -1,8 +1,9 @@
-# backend/app/api/analytics.py - v3.0
+# backend/app/api/analytics.py - v3.1
 from flask import Blueprint, jsonify, request
 from app.models import stakes_collection, users_collection
 from app.models.metric import Metric
 from app.utils.web3_utils import web3_manager
+from app.utils.mongodb_helpers import convert_to_double
 
 analytics_bp = Blueprint('analytics', __name__)
 
@@ -107,17 +108,32 @@ def get_metric_types():
         return jsonify({'error': str(e)}), 500
 
 def _get_tvl():
+    """
+    Calculate Total Value Locked (TVL) from active stakes.
+
+    Uses convert_to_double() to handle mixed int/string amounts in MongoDB.
+    Large uint256 values (>2^63) are stored as strings to avoid overflow.
+    """
     pipeline = [
         {'$match': {'status': 'active'}},
-        {'$group': {'_id': None, 'total': {'$sum': '$amount'}}}
+        {
+            '$group': {
+                '_id': None,
+                # Convert amount (int or string) to double before summing
+                'total': {'$sum': convert_to_double('$amount')}
+            }
+        }
     ]
-    
+
     result = list(stakes_collection.aggregate(pipeline))
-    tvl = result[0]['total'] if result else 0
-    
+    tvl_wei = int(result[0]['total']) if result else 0
+
+    # Convert Wei to DAI (divide by 10^18)
+    tvl_dai = tvl_wei / 10**18
+
     return {
-        'total_value_locked': str(tvl),
-        'tvl_formatted': f"{tvl} DAI"
+        'total_value_locked': str(tvl_wei),  # Keep Wei for API compatibility
+        'tvl_formatted': f"{tvl_dai:,.2f} DAI"  # Human-readable with 2 decimals
     }
 
 def _get_user_stats():
@@ -158,57 +174,69 @@ def _get_stake_stats():
     }
 
 def _get_reward_stats():
+    """
+    Calculate total and average rewards claimed across all stakes.
+
+    Converts total_rewards_claimed to double to handle potential large values.
+    """
     pipeline = [
         {
             '$group': {
                 '_id': None,
-                'total_claimed': {'$sum': '$total_rewards_claimed'},
-                'avg_per_stake': {'$avg': '$total_rewards_claimed'}
+                # Convert rewards (may be large uint256) to double before aggregation
+                'total_claimed': {'$sum': convert_to_double('$total_rewards_claimed')},
+                'avg_per_stake': {'$avg': convert_to_double('$total_rewards_claimed')}
             }
         }
     ]
-    
+
     result = list(stakes_collection.aggregate(pipeline))
-    
+
     return {
         'total_rewards_claimed': str(int(result[0]['total_claimed'])) if result else '0',
         'avg_rewards_per_stake': str(int(result[0]['avg_per_stake'])) if result else '0'
     }
 
 def _get_tier_distribution():
+    """
+    Group active stakes by tier and calculate distribution metrics.
+
+    Returns stake count, total amount, and average amount per tier.
+    Uses convert_to_double() for amount aggregations.
+    """
     pipeline = [
-        {
-            '$match': {'status': 'active'}
-        },
+        {'$match': {'status': 'active'}},
         {
             '$group': {
                 '_id': '$tier_id',
                 'count': {'$sum': 1},
-                'total_amount': {'$sum': '$amount'},
-                'avg_amount': {'$avg': '$amount'}
+                # Convert amount (int or string) to double for aggregation
+                'total_amount': {'$sum': convert_to_double('$amount')},
+                'avg_amount': {'$avg': convert_to_double('$amount')}
             }
         },
-        {
-            '$sort': {'_id': 1}
-        }
+        {'$sort': {'_id': 1}}
     ]
-    
+
     tiers = list(stakes_collection.aggregate(pipeline))
-    
+
     tier_names = {
         0: '7 days (5% APY)',
         1: '30 days (8% APY)',
         2: '90 days (12% APY)'
     }
-    
+
     return {
         'tiers': [
             {
                 'tier_id': tier['_id'],
                 'tier_name': tier_names.get(tier['_id'], 'Unknown'),
                 'stake_count': tier['count'],
-                'total_staked': str(tier['total_amount']),
-                'avg_stake_amount': str(int(tier['avg_amount']))
+                'total_staked': str(int(tier['total_amount'])),
+                'avg_stake_amount': str(int(tier['avg_amount'])),
+                # Add human-readable formatted values (Wei → DAI)
+                'total_staked_formatted': f"{tier['total_amount'] / 10**18:,.2f} DAI",
+                'avg_stake_formatted': f"{tier['avg_amount'] / 10**18:,.2f} DAI"
             }
             for tier in tiers
         ]

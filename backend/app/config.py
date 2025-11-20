@@ -27,7 +27,7 @@ class Config:
     
     # Event Listener
     START_BLOCK = int(os.getenv('START_BLOCK', '0'))
-    POLL_INTERVAL = int(os.getenv('POLL_INTERVAL', '5'))
+    POLL_INTERVAL = int(os.getenv('POLL_INTERVAL', '2'))  # Reduced from 5s to 2s for faster UI updates
     BATCH_SIZE = int(os.getenv('BATCH_SIZE', '1000'))
     
     # Notifications

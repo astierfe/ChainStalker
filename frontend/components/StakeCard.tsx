@@ -36,10 +36,20 @@ export function StakeCard({ stake, userAddress, onUpdate }: StakeCardProps) {
     return () => clearInterval(interval);
   }, [refetchRewards]);
 
-  // Call onUpdate after successful transactions
+  // Call onUpdate immediately and after delay when transactions confirm
+  // This ensures UI updates as soon as possible while backend processes events
   useEffect(() => {
     if (isClaimConfirmed || isUnstakeConfirmed) {
+      // Immediate refetch
       onUpdate?.();
+
+      // Additional refetch after 1.5s to catch backend event processing
+      // (backend polls every 2s, so this should catch the update)
+      const timer = setTimeout(() => {
+        onUpdate?.();
+      }, 1500);
+
+      return () => clearTimeout(timer);
     }
   }, [isClaimConfirmed, isUnstakeConfirmed, onUpdate]);
 

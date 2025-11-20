@@ -3,9 +3,9 @@
 
 import { useState, useEffect } from 'react';
 import { useAccount } from 'wagmi';
-import { formatUnits, parseUnits } from 'viem';
+import { formatUnits } from 'viem';
 import { TierSelector } from './TierSelector';
-import { useApproveDAI, useDAIAllowance, useDAIBalance } from '@/lib/hooks/useApproveDAI';
+import { useDAIBalance } from '@/lib/hooks/useApproveDAI';
 import { useStake } from '@/lib/hooks/useStake';
 
 export function StakeForm() {
@@ -15,30 +15,21 @@ export function StakeForm() {
 
   // Hooks
   const { balance } = useDAIBalance(address);
-  const { allowance, refetch: refetchAllowance } = useDAIAllowance(address);
-  const { approve, isPending: isApproving, isConfirming: isApprovingConfirming, isConfirmed: isApproveConfirmed } = useApproveDAI();
-  const { stake, isPending: isStaking, isConfirming: isStakingConfirming, isConfirmed: isStakeConfirmed } = useStake();
-
-  // Refetch allowance after approval
-  useEffect(() => {
-    if (isApproveConfirmed) {
-      refetchAllowance();
-    }
-  }, [isApproveConfirmed, refetchAllowance]);
+  const {
+    stake,
+    isPending,
+    isConfirming,
+    isConfirmed,
+    isApprovingDAI,
+    currentAllowance,
+  } = useStake();
 
   // Reset form after successful stake
   useEffect(() => {
-    if (isStakeConfirmed) {
+    if (isConfirmed) {
       setAmount('');
     }
-  }, [isStakeConfirmed]);
-
-  const handleApprove = () => {
-    if (!amount || parseFloat(amount) <= 0) {
-      return;
-    }
-    approve(amount);
-  };
+  }, [isConfirmed]);
 
   const handleStake = () => {
     if (!amount || parseFloat(amount) <= 0) {
@@ -46,10 +37,6 @@ export function StakeForm() {
     }
     stake(amount, selectedTier);
   };
-
-  // Check if amount is approved
-  const amountBN = amount ? parseUnits(amount, 18) : 0n;
-  const isApproved = allowance !== undefined && allowance >= amountBN && amountBN > 0n;
 
   const balanceFormatted = balance ? formatUnits(balance, 18) : '0';
 
@@ -85,33 +72,29 @@ export function StakeForm() {
       {/* Tier Selector */}
       <TierSelector selectedTier={selectedTier} onSelectTier={setSelectedTier} />
 
-      {/* Action Buttons */}
+      {/* Action Button */}
       <div className="space-y-3">
-        {!isApproved ? (
-          <button
-            onClick={handleApprove}
-            disabled={!amount || parseFloat(amount) <= 0 || isApproving || isApprovingConfirming}
-            className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-semibold py-3 px-4 rounded-lg transition-colors"
-          >
-            {isApproving || isApprovingConfirming
-              ? 'Approving...'
-              : 'Approve DAI'}
-          </button>
-        ) : (
-          <button
-            onClick={handleStake}
-            disabled={!amount || parseFloat(amount) <= 0 || isStaking || isStakingConfirming}
-            className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-semibold py-3 px-4 rounded-lg transition-colors"
-          >
-            {isStaking || isStakingConfirming
-              ? 'Staking...'
-              : 'Stake DAI'}
-          </button>
+        <button
+          onClick={handleStake}
+          disabled={!amount || parseFloat(amount) <= 0 || isPending || isConfirming}
+          className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-semibold py-3 px-4 rounded-lg transition-colors"
+        >
+          {isApprovingDAI
+            ? 'Approving DAI...'
+            : isPending || isConfirming
+            ? 'Staking...'
+            : 'Stake DAI'}
+        </button>
+
+        {isApprovingDAI && (
+          <p className="text-sm text-blue-400 text-center">
+            Step 1/2: Approving DAI (check wallet)
+          </p>
         )}
 
-        {isApproved && (
+        {isPending && !isApprovingDAI && (
           <p className="text-sm text-green-400 text-center">
-            ✓ Amount approved - Ready to stake
+            Step 2/2: Staking DAI (check wallet)
           </p>
         )}
       </div>

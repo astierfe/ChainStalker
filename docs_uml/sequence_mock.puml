@@ -1,0 +1,92 @@
+@startuml
+!theme mars
+
+actor User
+participant "Frontend\n(Next.js + Wagmi)" as FE
+participant "Wallet\n(MetaMask)" as Wallet
+participant "Smart Contract\n(StakingPool)" as SC
+participant "Blockchain Listener\n(Python)" as Listener
+participant "Flask API" as API
+participant "Celery Worker\n(Optional)" as Worker
+database "MongoDB" as DB
+
+== Phase 1: Stake Creation (with Auto-Approval) ==
+User -> FE: Enter 1000 DAI + Select Tier
+FE -> FE: Check DAI allowance
+alt Allowance < 1000 DAI
+    FE -> Wallet: approve(StakingPool, 5000 DAI)
+    note right: 5x buffer for future stakes
+    Wallet -> SC: DAI.approve()
+    SC --> Wallet: Approval confirmed
+    Wallet --> FE: onApproveConfirmed
+end
+
+FE -> Wallet: stake(1000 DAI, tierId)
+Wallet -> SC: StakingPool.stake()
+SC -> SC: transferFrom(DAI)\nCreate stake record
+SC --> Wallet: Event: StakeCreated
+Wallet --> FE: Transaction confirmed
+
+== Phase 2: Event Processing (Polling every 2s) ==
+Listener -> SC: Poll for new events\n(fromBlock → toBlock)
+SC --> Listener: StakeCreated event
+Listener -> Listener: convert_uint256_for_mongodb()
+Listener -> DB: stakes.insert_one()\nusers.update_one($inc)
+Listener -> DB: raw_events.insert_one()
+
+== Phase 3: Frontend Data Refresh ==
+FE -> API: GET /api/users/{address}/stakes\n(refetch every 3s)
+API -> DB: stakes.find({user_address, status: 'active'})
+DB --> API: Active stakes list
+API --> FE: JSON response
+FE -> FE: Update UI with new stake
+
+User -> FE: View Analytics
+FE -> API: GET /api/analytics/\n(refetch every 30s)
+API -> DB: Aggregation pipelines\n($sum with $convert)
+DB --> API: TVL, users, tier distribution
+API --> FE: Formatted analytics
+
+== Phase 4: Rewards Claim ==
+User -> FE: Click "Claim Rewards"
+FE -> Wallet: claimRewards(stakeIndex)
+Wallet -> SC: StakingPool.claimRewards()
+SC -> SC: Calculate rewards\nTransfer DAI
+SC --> Wallet: Event: RewardsClaimed
+Wallet --> FE: Transaction confirmed
+
+Listener -> SC: Poll for events
+SC --> Listener: RewardsClaimed event
+Listener -> DB: Update stake.total_rewards_claimed\nUpdate user.total_rewards_claimed
+
+== Phase 5: Unstake ==
+User -> FE: Click "Unstake"
+FE -> Wallet: unstake(stakeIndex)
+Wallet -> SC: StakingPool.unstake()
+SC -> SC: Calculate final rewards\nTransfer DAI + rewards
+SC --> Wallet: Event: Unstaked
+Wallet --> FE: Transaction confirmed
+FE -> FE: Force refetch (immediate + 1.5s delay)
+
+Listener -> SC: Poll for events (2s interval)
+SC --> Listener: Unstaked event
+Listener -> DB: Update stake.status = 'unstaked'\nUpdate user stats
+DB --> API: Updated data
+API --> FE: Refetch returns updated stakes
+FE -> FE: Remove from active stakes UI
+
+== Optional: Celery Metrics (Background) ==
+note over Worker, DB
+Celery Beat triggers periodic tasks:
+- snapshot_tvl (every 5 min)
+- snapshot_users (every 5 min)
+- snapshot_tier_distribution (every 10 min)
+- calculate_effective_apy (every 15 min)
+
+Stores historical metrics in DB.metrics collection
+(Not currently used by frontend analytics)
+end note
+
+Worker -> DB: metrics.insert_one()\n(historical snapshots)
+
+@enduml

@@ -1,17 +1,20 @@
-# backend/app/models/stake.py - v1.0
+# backend/app/models/stake.py - v1.1
 from datetime import datetime
 from app.models import stakes_collection
+from app.utils.mongodb_helpers import convert_uint256_for_mongodb
 
 class Stake:
     @staticmethod
     def create(event_data):
-        # Convert uint256 values - store as int if within MongoDB int64 range, else as string
-        amount = int(event_data['amount'])
+        """
+        Create a new stake record from blockchain event data.
 
+        Uses convert_uint256_for_mongodb() to safely store large amounts.
+        """
         stake_data = {
             'user_address': event_data['user'].lower(),
             'stake_index': int(event_data['stakeIndex']),
-            'amount': amount if -2**63 <= amount < 2**63 else str(amount),
+            'amount': convert_uint256_for_mongodb(event_data['amount']),
             'tier_id': int(event_data['tierId']),
             'start_time': int(event_data['timestamp']),
             'last_reward_claim': int(event_data['timestamp']),

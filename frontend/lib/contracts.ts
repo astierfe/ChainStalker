@@ -50,6 +50,9 @@ export const ERC20_ABI = [
   },
 ] as const;
 
+// Alias for clarity in staking context
+export const DAI_TOKEN_ABI = ERC20_ABI;
+
 // ============ Staking Pool ABI ============
 export const STAKING_POOL_ABI = [
   // ===== Events =====

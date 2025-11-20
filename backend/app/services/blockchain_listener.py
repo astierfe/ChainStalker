@@ -1,8 +1,9 @@
-# backend/app/services/blockchain_listener.py - v1.0
+# backend/app/services/blockchain_listener.py - v1.1
 import time
 import logging
 from datetime import datetime
 from app.utils.web3_utils import web3_manager
+from app.utils.mongodb_helpers import convert_uint256_for_mongodb
 from app.models.user import User
 from app.models.stake import Stake
 from app.models import db
@@ -56,52 +57,81 @@ class BlockchainListener:
         logger.info(f"StakeCreated: user={args['user']}, amount={args['amount']}, tier={args['tierId']}")
     
     def process_unstaked(self, event):
+        """
+        Process Unstaked event with MongoDB-safe type conversion.
+
+        Converts uint256 amount/rewards using convert_uint256_for_mongodb()
+        to avoid overflow errors when storing in MongoDB.
+        """
         args = event['args']
-        
+
+        # Convert uint256 to MongoDB-safe types (int or string)
+        amount = int(args['amount'])
+        rewards = int(args['rewards'])
+
         Stake.update_status(
             args['user'],
             args['stakeIndex'],
             'unstaked',
-            unstake_amount=args['amount'],
-            unstake_rewards=args['rewards'],
+            unstake_amount=convert_uint256_for_mongodb(amount),
+            unstake_rewards=convert_uint256_for_mongodb(rewards),
             unstaked_at=datetime.utcnow()
         )
-        
-        User.increment_field(args['user'], 'total_staked', -args['amount'])
-        User.increment_field(args['user'], 'total_rewards_claimed', args['rewards'])
+
+        # User.increment_field handles large values internally
+        User.increment_field(args['user'], 'total_staked', -amount)
+        User.increment_field(args['user'], 'total_rewards_claimed', rewards)
         User.increment_field(args['user'], 'active_stakes_count', -1)
-        
-        logger.info(f"Unstaked: user={args['user']}, amount={args['amount']}, rewards={args['rewards']}")
+
+        logger.info(f"Unstaked: user={args['user']}, amount={amount}, rewards={rewards}")
     
     def process_rewards_claimed(self, event):
+        """
+        Process RewardsClaimed event with MongoDB-safe type conversion.
+        """
         args = event['args']
-        
-        Stake.add_rewards(args['user'], args['stakeIndex'], args['rewards'])
-        User.increment_field(args['user'], 'total_rewards_claimed', args['rewards'])
-        
-        logger.info(f"RewardsClaimed: user={args['user']}, rewards={args['rewards']}")
+
+        # Convert uint256 rewards to int (increment_field handles MongoDB conversion)
+        rewards = int(args['rewards'])
+
+        Stake.add_rewards(args['user'], args['stakeIndex'], rewards)
+        User.increment_field(args['user'], 'total_rewards_claimed', rewards)
+
+        logger.info(f"RewardsClaimed: user={args['user']}, rewards={rewards}")
     
     def process_emergency_withdraw(self, event):
+        """
+        Process EmergencyWithdraw event with MongoDB-safe type conversion.
+        """
         args = event['args']
-        
+
+        # Convert uint256 amount to MongoDB-safe type
+        amount = int(args['amount'])
+
         Stake.update_status(
             args['user'],
             args['stakeIndex'],
             'emergency_withdrawn',
-            emergency_amount=args['amount'],
+            emergency_amount=convert_uint256_for_mongodb(amount),
             emergency_withdrawn_at=datetime.utcnow()
         )
-        
-        User.increment_field(args['user'], 'total_staked', -args['amount'])
+
+        User.increment_field(args['user'], 'total_staked', -amount)
         User.increment_field(args['user'], 'active_stakes_count', -1)
-        
-        logger.info(f"EmergencyWithdraw: user={args['user']}, amount={args['amount']}")
+
+        logger.info(f"EmergencyWithdraw: user={args['user']}, amount={amount}")
     
     def process_reward_pool_funded(self, event):
         args = event['args']
         logger.info(f"RewardPoolFunded: funder={args['funder']}, amount={args['amount']}")
     
     def store_raw_event(self, event):
+        """
+        Store raw blockchain event in MongoDB with proper type conversion.
+
+        Converts all uint256 values using convert_uint256_for_mongodb()
+        to ensure MongoDB compatibility.
+        """
         # Convert all values to MongoDB-compatible types
         args_dict = {}
         for key, value in event['args'].items():
@@ -109,8 +139,8 @@ class BlockchainListener:
             if hasattr(value, 'hex'):  # bytes-like
                 args_dict[key] = value.hex() if value else None
             elif isinstance(value, int):
-                # Ensure int fits in MongoDB int64 range
-                args_dict[key] = int(value) if -2**63 <= value < 2**63 else str(value)
+                # Use centralized conversion function
+                args_dict[key] = convert_uint256_for_mongodb(value)
             else:
                 args_dict[key] = str(value)
 
