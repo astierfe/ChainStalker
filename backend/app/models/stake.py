@@ -47,6 +47,14 @@ class Stake:
     
     @staticmethod
     def add_rewards(user_address, stake_index, rewards):
+        """
+        Add rewards to a stake and update last_reward_claim timestamp.
+
+        Uses get_current_timestamp() from mongodb_helpers to store timestamp
+        as integer (matching on-chain block.timestamp format).
+        """
+        from app.utils.mongodb_helpers import get_current_timestamp
+
         stakes_collection.update_one(
             {
                 'user_address': user_address.lower(),
@@ -55,7 +63,7 @@ class Stake:
             {
                 '$inc': {'total_rewards_claimed': rewards},
                 '$set': {
-                    'last_reward_claim': datetime.utcnow(),
+                    'last_reward_claim': get_current_timestamp(),
                     'updated_at': datetime.utcnow()
                 }
             }

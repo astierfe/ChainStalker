@@ -18,10 +18,12 @@ def create_app():
     from app.api.users import users_bp
     from app.api.stakes import stakes_bp
     from app.api.analytics import analytics_bp
-    
+    from app.api.tvl_sparkline import tvl_sparkline_bp
+
     app.register_blueprint(users_bp, url_prefix='/api/users')
     app.register_blueprint(stakes_bp, url_prefix='/api/stakes')
     app.register_blueprint(analytics_bp, url_prefix='/api/analytics')
+    app.register_blueprint(tvl_sparkline_bp, url_prefix='/api/analytics/tvl')
     
     @app.route('/health')
     def health():

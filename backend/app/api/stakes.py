@@ -1,6 +1,7 @@
-# backend/app/api/stakes.py - v2.0
+# backend/app/api/stakes.py - v2.1
 from flask import Blueprint, request, jsonify
 from app.models.stake import Stake
+from app.utils.api_formatters import format_stake_for_api
 
 stakes_bp = Blueprint('stakes', __name__)
 
@@ -29,7 +30,7 @@ def list_stakes():
         total = stakes_collection.count_documents(query)
         
         return jsonify({
-            'stakes': [_format_stake(s) for s in stakes],
+            'stakes': [format_stake_for_api(s) for s in stakes],
             'total': total,
             'skip': skip,
             'limit': limit,
@@ -54,8 +55,8 @@ def get_stake(address, stake_index):
         
         if not stake:
             return jsonify({'error': 'Stake not found'}), 404
-        
-        return jsonify(_format_stake(stake)), 200
+
+        return jsonify(format_stake_for_api(stake)), 200
     
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -64,9 +65,9 @@ def get_stake(address, stake_index):
 def get_active_stakes():
     try:
         stakes = Stake.get_all_active()
-        
+
         return jsonify({
-            'stakes': [_format_stake(s) for s in stakes],
+            'stakes': [format_stake_for_api(s) for s in stakes],
             'total': len(stakes)
         }), 200
     
@@ -126,19 +127,3 @@ def get_stakes_stats():
     
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-
-def _format_stake(stake):
-    return {
-        'user_address': stake['user_address'],
-        'stake_index': stake['stake_index'],
-        'amount': str(stake['amount']),
-        'tier_id': stake['tier_id'],
-        'status': stake['status'],
-        'total_rewards_claimed': str(stake.get('total_rewards_claimed', 0)),
-        'start_time': stake['start_time'],
-        'last_reward_claim': stake.get('last_reward_claim'),
-        'tx_hash': stake.get('tx_hash'),
-        'block_number': stake.get('block_number'),
-        'created_at': stake.get('created_at').isoformat() if stake.get('created_at') else None,
-        'updated_at': stake.get('updated_at').isoformat() if stake.get('updated_at') else None
-    }

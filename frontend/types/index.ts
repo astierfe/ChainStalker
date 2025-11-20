@@ -73,6 +73,23 @@ export interface TVLData {
   tvl_formatted: string;
 }
 
+// TVL Sparkline Types
+export interface TVLSparklineDataPoint {
+  timestamp: string;
+  value_dai: number;
+  value_wei: string;
+}
+
+export interface TVLSparklineData {
+  current_tvl: string;
+  current_tvl_wei: string;
+  change_24h: number;
+  change_percent_24h: number;
+  data_points: TVLSparklineDataPoint[];
+  period_hours: number;
+  points_returned: number;
+}
+
 export interface UserStats {
   total_users: number;
   active_users: number;

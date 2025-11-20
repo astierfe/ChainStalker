@@ -6,24 +6,12 @@ ChainStalker stores large uint256 values as strings (when > int64 max)
 to avoid MongoDB overflow. These helpers provide conversion utilities
 for both storage and aggregation operations.
 """
+from datetime import datetime
+
 
 def convert_uint256_for_mongodb(value):
     """
     Convert Solidity uint256 to MongoDB-safe type (int or string).
-
-    MongoDB's int64 type has a range of -2^63 to 2^63-1. Values exceeding
-    this range must be stored as strings to avoid overflow errors.
-
-    Args:
-        value: uint256 value from blockchain (int, HexBytes, or string)
-
-    Returns:
-        int | str: int if value fits in MongoDB int64 range, else string
-
-    Example:
-        amount = convert_uint256_for_mongodb(event['args']['amount'])
-        # Small values: 1000 (int)
-        # Large values: "1000000000000000000000" (string)
     """
     # Convert to int if not already
     int_value = int(value)
@@ -39,19 +27,6 @@ def convert_to_double(field_name):
     Handles both int and string values in MongoDB, converting them to double
     for use in aggregation pipelines ($sum, $avg, etc).
 
-    Args:
-        field_name: MongoDB field name (e.g., '$amount', '$total_rewards_claimed')
-
-    Returns:
-        dict: MongoDB $convert expression with error handling
-
-    Example:
-        pipeline = [
-            {'$group': {
-                '_id': None,
-                'total': {'$sum': convert_to_double('$amount')}
-            }}
-        ]
     """
     return {
         '$convert': {
@@ -61,3 +36,42 @@ def convert_to_double(field_name):
             'onNull': 0     # Return 0 if field is null
         }
     }
+
+
+def get_current_timestamp():
+    """
+    Get current UTC timestamp as integer (seconds since epoch).
+
+    Centralized function for consistent timestamp storage in MongoDB.
+    All blockchain-related timestamps should use this format to match
+    on-chain block.timestamp values.
+
+    Returns:
+        int: Current UTC timestamp in seconds
+    """
+    return int(datetime.utcnow().timestamp())
+
+
+def normalize_timestamp_field(value):
+    """
+    Normalize a timestamp field to integer format.
+
+    Handles both datetime objects (legacy data) and integer timestamps.
+    This ensures backward compatibility with old data while enforcing
+    integer storage going forward.
+
+    Args:
+        value: Can be datetime object, int, or None
+
+    Returns:
+        int or None: Timestamp in seconds, or None if input is None
+    """
+    if value is None:
+        return None
+
+    if isinstance(value, datetime):
+        # Convert legacy datetime objects to timestamp
+        return int(value.timestamp())
+
+    # Already an integer timestamp
+    return int(value)

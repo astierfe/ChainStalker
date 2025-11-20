@@ -1,9 +1,10 @@
-# backend/app/tasks/analytics_tasks.py - v4.0
+# backend/app/tasks/analytics_tasks.py - v4.2
 import logging
 from datetime import datetime
 from app.tasks.celery_app import celery_app
 from app.models.metric import Metric
 from app.models import stakes_collection, users_collection
+from app.utils.mongodb_helpers import convert_to_double, convert_uint256_for_mongodb
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -12,22 +13,24 @@ logger = logging.getLogger(__name__)
 def snapshot_tvl():
     """Calculate and record Total Value Locked (TVL)"""
     try:
+        # Use convert_to_double to handle mixed int/string types in amount field
         pipeline = [
             {'$match': {'status': 'active'}},
-            {'$group': {'_id': None, 'total': {'$sum': '$amount'}}}
+            {'$group': {'_id': None, 'total': {'$sum': convert_to_double('$amount')}}}
         ]
-        
+
         result = list(stakes_collection.aggregate(pipeline))
-        tvl = result[0]['total'] if result else 0
-        
+        tvl = int(result[0]['total']) if result else 0
+
         active_stakes_count = stakes_collection.count_documents({'status': 'active'})
-        
+
+        # Convert large TVL values to MongoDB-safe format (int or string)
         Metric.record(
             metric_type='tvl',
-            value=tvl,
+            value=convert_uint256_for_mongodb(tvl),
             metadata={
                 'active_stakes': active_stakes_count,
-                'tvl_formatted': f"{tvl} DAI"
+                'tvl_formatted': f"{tvl / 10**18:,.2f} DAI"
             }
         )
         
@@ -65,24 +68,25 @@ def snapshot_users():
 def snapshot_tier_distribution():
     """Record stake distribution across tiers"""
     try:
+        # Use convert_to_double to handle mixed int/string types in amount field
         pipeline = [
             {'$match': {'status': 'active'}},
             {
                 '$group': {
                     '_id': '$tier_id',
                     'count': {'$sum': 1},
-                    'total_amount': {'$sum': '$amount'}
+                    'total_amount': {'$sum': convert_to_double('$amount')}
                 }
             }
         ]
-        
+
         tiers = list(stakes_collection.aggregate(pipeline))
-        
+
         tier_data = {}
         for tier in tiers:
             tier_data[f'tier_{tier["_id"]}'] = {
                 'count': tier['count'],
-                'amount': str(tier['total_amount'])
+                'amount': str(int(tier['total_amount']))
             }
         
         total_active = sum(t['count'] for t in tiers)
@@ -140,21 +144,22 @@ def snapshot_top_users():
 def calculate_effective_apy():
     """Calculate effective APY based on actual rewards distributed"""
     try:
+        # Use convert_to_double to handle mixed int/string types
         pipeline = [
             {
                 '$group': {
                     '_id': None,
-                    'total_staked': {'$sum': '$amount'},
-                    'total_rewards': {'$sum': '$total_rewards_claimed'}
+                    'total_staked': {'$sum': convert_to_double('$amount')},
+                    'total_rewards': {'$sum': convert_to_double('$total_rewards_claimed')}
                 }
             }
         ]
-        
+
         result = list(stakes_collection.aggregate(pipeline))
-        
+
         if result and result[0]['total_staked'] > 0:
-            total_staked = result[0]['total_staked']
-            total_rewards = result[0]['total_rewards']
+            total_staked = int(result[0]['total_staked'])
+            total_rewards = int(result[0]['total_rewards'])
             
             effective_apy = (total_rewards / total_staked) * 100 if total_staked > 0 else 0
             
