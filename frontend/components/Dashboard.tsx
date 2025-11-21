@@ -1,6 +1,7 @@
 // frontend/components/Dashboard.tsx
 'use client';
 
+import Link from 'next/link';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { useAccount } from 'wagmi';
 import { AnalyticsPanel } from './AnalyticsPanel';
@@ -18,13 +19,29 @@ export function Dashboard() {
       <header className="border-b border-gray-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-500 to-cyan-500 bg-clip-text text-transparent">
-                ChainStaker
-              </h1>
-              <p className="text-sm text-gray-400 mt-1">
-                Decentralized DAI Staking Platform
-              </p>
+            <div className="flex items-center gap-8">
+              <div>
+                <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-500 to-cyan-500 bg-clip-text text-transparent">
+                  ChainStaker
+                </h1>
+                <p className="text-sm text-gray-400 mt-1">
+                  Decentralized DAI Staking Platform
+                </p>
+              </div>
+              <nav className="hidden md:flex gap-4">
+                <Link
+                  href="/"
+                  className="text-blue-400 font-medium hover:text-blue-300 transition-colors"
+                >
+                  Dashboard
+                </Link>
+                <Link
+                  href="/history"
+                  className="text-gray-400 font-medium hover:text-white transition-colors"
+                >
+                  History
+                </Link>
+              </nav>
             </div>
             <ConnectButton />
           </div>

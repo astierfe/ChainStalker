@@ -43,6 +43,14 @@ celery_app.conf.beat_schedule = {
         'task': 'tasks.calculate_effective_apy',
         'schedule': 900.0,
     },
+    'snapshot-rewards-timeline-every-15-minutes': {
+        'task': 'tasks.snapshot_rewards_timeline',
+        'schedule': 900.0,
+    },
+    'snapshot-activity-heatmap-every-15-minutes': {
+        'task': 'tasks.snapshot_activity_heatmap',
+        'schedule': 900.0,
+    },
     'cleanup-old-metrics-daily': {
         'task': 'tasks.cleanup_old_metrics',
         'schedule': crontab(hour=3, minute=0),

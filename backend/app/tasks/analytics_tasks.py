@@ -1,9 +1,9 @@
-# backend/app/tasks/analytics_tasks.py - v4.2
+# backend/app/tasks/analytics_tasks.py - v4.3
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from app.tasks.celery_app import celery_app
 from app.models.metric import Metric
-from app.models import stakes_collection, users_collection
+from app.models import stakes_collection, users_collection, raw_events_collection
 from app.utils.mongodb_helpers import convert_to_double, convert_uint256_for_mongodb
 
 logging.basicConfig(level=logging.INFO)
@@ -228,4 +228,171 @@ def test_mongodb():
         return {'status': 'success', 'collections': collections}
     except Exception as e:
         logger.error(f"❌ MongoDB connection failed: {str(e)}")
+        return {'status': 'error', 'message': str(e)}
+
+@celery_app.task(name='tasks.snapshot_rewards_timeline')
+def snapshot_rewards_timeline():
+    """
+    Record rewards claimed timeline by aggregating RewardsClaimed events by day.
+
+    Aggregates raw_events collection to calculate:
+    - Daily rewards claimed
+    - Number of claims per day
+    - Used for RewardsTimelineChart component
+    """
+    try:
+        # Look back 90 days for historical data
+        start_time = datetime.utcnow() - timedelta(days=90)
+
+        # Aggregate RewardsClaimed events by day
+        pipeline = [
+            {
+                '$match': {
+                    'event_name': 'RewardsClaimed',
+                    'processed_at': {'$gte': start_time}
+                }
+            },
+            {
+                '$project': {
+                    'date': {
+                        '$dateToString': {
+                            'format': '%Y-%m-%d',
+                            'date': '$processed_at'
+                        }
+                    },
+                    'amount': convert_to_double('$args.rewards')
+                }
+            },
+            {
+                '$group': {
+                    '_id': '$date',
+                    'total_rewards': {'$sum': '$amount'},
+                    'claim_count': {'$sum': 1}
+                }
+            },
+            {'$sort': {'_id': 1}}
+        ]
+
+        daily_rewards = list(raw_events_collection.aggregate(pipeline))
+
+        # Calculate totals
+        total_days = len(daily_rewards)
+        total_rewards_sum = 0
+        timeline_data = []
+
+        for day_data in daily_rewards:
+            total_rewards_int = int(day_data['total_rewards'])
+            total_rewards_sum += total_rewards_int
+
+            timeline_data.append({
+                'date': day_data['_id'],
+                'rewards_wei': str(total_rewards_int),
+                'rewards_dai': round(total_rewards_int / 10**18, 2),
+                'claim_count': day_data['claim_count']
+            })
+
+        # Store all timeline data as a single metric (like snapshot_activity_heatmap does)
+        Metric.record(
+            metric_type='rewards_timeline',
+            value=total_days,
+            metadata={
+                'timeline_data': timeline_data,
+                'days_covered': total_days,
+                'total_rewards_wei': str(total_rewards_sum),
+                'total_rewards_dai': round(total_rewards_sum / 10**18, 2),
+                'total_claims': sum(day['claim_count'] for day in daily_rewards)
+            }
+        )
+
+        logger.info(f"✅ Rewards Timeline: {total_days} days, {total_rewards_sum / 10**18:.2f} DAI total")
+        return {'status': 'success', 'days': total_days, 'total_rewards': str(total_rewards_sum)}
+
+    except Exception as e:
+        logger.error(f"❌ Rewards Timeline Snapshot failed: {str(e)}")
+        return {'status': 'error', 'message': str(e)}
+
+@celery_app.task(name='tasks.snapshot_activity_heatmap')
+def snapshot_activity_heatmap():
+    """
+    Record activity heatmap by aggregating raw_events by hour and day.
+
+    Aggregates raw_events collection to calculate:
+    - Events per hour for each day (24 hours x 7-90 days)
+    - Breakdown by event type (StakeCreated, RewardsClaimed, Unstaked)
+    - Used for ActivityHeatmap component
+    """
+    try:
+        # Look back 30 days for heatmap
+        start_time = datetime.utcnow() - timedelta(days=30)
+
+        # Aggregate events by date and hour
+        pipeline = [
+            {
+                '$match': {
+                    'processed_at': {'$gte': start_time},
+                    'event_name': {'$in': ['StakeCreated', 'RewardsClaimed', 'Unstaked']}
+                }
+            },
+            {
+                '$project': {
+                    'date': {
+                        '$dateToString': {
+                            'format': '%Y-%m-%d',
+                            'date': '$processed_at'
+                        }
+                    },
+                    'hour': {'$hour': '$processed_at'},
+                    'event_name': 1
+                }
+            },
+            {
+                '$group': {
+                    '_id': {
+                        'date': '$date',
+                        'hour': '$hour',
+                        'event': '$event_name'
+                    },
+                    'count': {'$sum': 1}
+                }
+            },
+            {'$sort': {'_id.date': 1, '_id.hour': 1}}
+        ]
+
+        activity_data = list(raw_events_collection.aggregate(pipeline))
+
+        # Group by date-hour for storage
+        hourly_activity = {}
+        for item in activity_data:
+            date_hour_key = f"{item['_id']['date']}_{item['_id']['hour']:02d}"
+            event_type = item['_id']['event']
+
+            if date_hour_key not in hourly_activity:
+                hourly_activity[date_hour_key] = {
+                    'date': item['_id']['date'],
+                    'hour': item['_id']['hour'],
+                    'StakeCreated': 0,
+                    'RewardsClaimed': 0,
+                    'Unstaked': 0,
+                    'total': 0
+                }
+
+            hourly_activity[date_hour_key][event_type] = item['count']
+            hourly_activity[date_hour_key]['total'] += item['count']
+
+        # Store aggregated data as a single metric with all hourly data
+        Metric.record(
+            metric_type='activity_heatmap',
+            value=len(hourly_activity),
+            metadata={
+                'hourly_data': list(hourly_activity.values()),
+                'days_covered': len(set(item['date'] for item in hourly_activity.values())),
+                'total_events': sum(item['total'] for item in hourly_activity.values())
+            }
+        )
+
+        logger.info(f"✅ Activity Heatmap: {len(hourly_activity)} time slots recorded")
+        return {'status': 'success', 'time_slots': len(hourly_activity)}
+
+    except Exception as e:
+        logger.error(f"❌ Activity Heatmap Snapshot failed: {str(e)}")
         return {'status': 'error', 'message': str(e)}

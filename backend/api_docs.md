@@ -1,4 +1,4 @@
-# ChainStaker API Documentation - v1.0
+# ChainStaker API Documentation - v1.2
 
 Base URL: `http://localhost:5000`
 

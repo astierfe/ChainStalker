@@ -174,3 +174,54 @@ export interface TopStakersData {
   timestamp: string | null;
   message?: string;
 }
+
+// ============ Rewards Timeline Types ============
+export interface RewardsTimelineDataPoint {
+  date: string;
+  rewards_wei: string;
+  rewards_dai: number;
+  claim_count: number;
+  timestamp: string;
+}
+
+export interface RewardsTimelineData {
+  timeline: RewardsTimelineDataPoint[];
+  days: number;
+  data_points: number;
+  total_rewards_wei: string;
+  total_rewards_dai: number;
+  total_claims: number;
+}
+
+// ============ Activity Heatmap Types ============
+export interface ActivityHeatmapDataPoint {
+  date: string;
+  hour: number;
+  StakeCreated: number;
+  RewardsClaimed: number;
+  Unstaked: number;
+  total: number;
+}
+
+export interface ActivityHeatmapData {
+  heatmap: ActivityHeatmapDataPoint[];
+  days_covered: number;
+  total_events: number;
+  data_points: number;
+  timestamp: string | null;
+  message?: string;
+}
+
+// ============ TVL History Types ============
+export interface TVLHistoryDataPoint {
+  timestamp: string;
+  value_dai: number;
+  value_wei: string;
+}
+
+export interface TVLHistoryData {
+  type: string;
+  hours: number;
+  data_points: number;
+  history: TVLHistoryDataPoint[];
+}
