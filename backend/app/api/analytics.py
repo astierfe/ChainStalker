@@ -107,6 +107,48 @@ def get_metric_types():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@analytics_bp.route('/top-stakers', methods=['GET'])
+def get_top_stakers():
+    """
+    Get top stakers from latest snapshot.
+    Fixed limit of 3 stakers for compact dashboard display.
+    """
+    try:
+        # Get latest top_users snapshot from metrics
+        latest_snapshot = Metric.get_latest('top_users')
+
+        if not latest_snapshot:
+            return jsonify({
+                'stakers': [],
+                'timestamp': None,
+                'message': 'No snapshots available yet'
+            }), 200
+
+        # Extract users array from metadata (limited to top 3)
+        users = latest_snapshot.get('metadata', {}).get('users', [])[:3]
+
+        # Format response with rank
+        stakers = [
+            {
+                'rank': idx + 1,
+                'address': user['address'],
+                'total_staked': user['total_staked'],
+                'total_staked_formatted': f"{int(user['total_staked']) / 10**18:,.2f} DAI",
+                'rewards_claimed': user['rewards_claimed'],
+                'active_stakes': user['active_stakes']
+            }
+            for idx, user in enumerate(users)
+        ]
+
+        return jsonify({
+            'stakers': stakers,
+            'count': len(stakers),
+            'timestamp': latest_snapshot['timestamp'].isoformat()
+        }), 200
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 def _get_tvl():
     """
     Calculate Total Value Locked (TVL) from active stakes.

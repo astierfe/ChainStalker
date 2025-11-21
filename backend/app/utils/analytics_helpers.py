@@ -184,3 +184,43 @@ def get_metric_change_data(
         'change_absolute': change_absolute,
         'change_percent': change_percent
     }
+
+
+def calculate_user_total_staked_from_stakes(stakes_collection, user_address: str) -> int:
+    """
+    Calculate user's total staked amount by aggregating active stakes.
+
+    This is the SOURCE OF TRUTH for total_staked, fixing the issue where
+    increment_field() fails with large uint256 values (>2^63).
+
+    Uses MongoDB aggregation to sum all active stake amounts for a user.
+    Handles mixed int/string types from convert_uint256_for_mongodb().
+
+    Args:
+        stakes_collection: MongoDB collection instance
+        user_address: User's Ethereum address (lowercase)
+
+    Returns:
+        Total staked amount in Wei (int)
+
+    Example:
+        >>> calculate_user_total_staked_from_stakes(stakes_collection, '0xabc...')
+        1500000000000000000000  # 1500 DAI in Wei
+    """
+    from app.utils.mongodb_helpers import convert_to_double
+
+    pipeline = [
+        {'$match': {
+            'user_address': user_address.lower(),
+            'status': 'active'
+        }},
+        {'$group': {
+            '_id': None,
+            'total': {'$sum': convert_to_double('$amount')}
+        }}
+    ]
+
+    result = list(stakes_collection.aggregate(pipeline))
+    total_staked = int(result[0]['total']) if result else 0
+
+    return total_staked

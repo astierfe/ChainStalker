@@ -26,7 +26,7 @@ contracts/out/
 contracts/broadcast/
 
 CLAUDE.md
-.claude/
+*.claude
 
 # Tracking
 tracking/

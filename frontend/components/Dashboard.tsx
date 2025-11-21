@@ -6,6 +6,8 @@ import { useAccount } from 'wagmi';
 import { AnalyticsPanel } from './AnalyticsPanel';
 import { StakeForm } from './StakeForm';
 import { StakeList } from './StakeList';
+import { TVLSparklineCard } from './TVLSparklineCard';
+import { TopStakersCompact } from './TopStakersCompact';
 
 export function Dashboard() {
   const { isConnected } = useAccount();
@@ -38,9 +40,15 @@ export function Dashboard() {
           {isConnected ? (
             /* Staking Interface */
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              {/* Left Column: Stake Form */}
-              <div>
+              {/* Left Column: Stake Form + Analytics Cards */}
+              <div className="space-y-4">
                 <StakeForm />
+
+                {/* TVL Sparkline */}
+                <TVLSparklineCard />
+
+                {/* Top 3 Stakers */}
+                <TopStakersCompact />
               </div>
 
               {/* Right Column: Stake List */}
@@ -71,7 +79,7 @@ export function Dashboard() {
           <div className="text-center text-sm text-gray-400">
             <p>ChainStaker - Built with Next.js, Wagmi, and RainbowKit</p>
             <p className="mt-1">
-              Network: <span className="text-blue-400">Anvil Local (31337)</span>
+              Network: <span className="text-blue-400">SEPOLIA</span>
             </p>
           </div>
         </div>

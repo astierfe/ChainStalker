@@ -106,24 +106,46 @@ def snapshot_tier_distribution():
 
 @celery_app.task(name='tasks.snapshot_top_users')
 def snapshot_top_users():
-    """Record top 10 users by total staked amount"""
+    """
+    Record top 10 users by total staked amount.
+
+    Uses MongoDB aggregation on stakes collection to calculate accurate total_staked.
+    This fixes the issue where users.total_staked was incorrect due to uint256 overflow.
+    """
     try:
-        top_users = list(users_collection.find(
-            {'total_staked': {'$gt': 0}}
-        ).sort('total_staked', -1).limit(10))
-        
-        top_users_data = [
+        # Aggregate active stakes by user to get accurate total_staked
+        pipeline = [
+            {'$match': {'status': 'active'}},
             {
-                'address': user['address'],
-                'total_staked': str(user['total_staked']),
-                'rewards_claimed': str(user.get('total_rewards_claimed', 0)),
-                'active_stakes': user.get('active_stakes_count', 0)
-            }
-            for user in top_users
+                '$group': {
+                    '_id': '$user_address',
+                    'total_staked': {'$sum': convert_to_double('$amount')},
+                    'active_stakes': {'$sum': 1}
+                }
+            },
+            {'$sort': {'total_staked': -1}},
+            {'$limit': 10}
         ]
-        
-        total_top_staked = sum(user['total_staked'] for user in top_users)
-        
+
+        aggregated_users = list(stakes_collection.aggregate(pipeline))
+
+        # Enrich with rewards data from users collection
+        top_users_data = []
+        for agg_user in aggregated_users:
+            user_address = agg_user['_id']
+            user_doc = users_collection.find_one({'address': user_address})
+
+            total_staked_int = int(agg_user['total_staked'])
+
+            top_users_data.append({
+                'address': user_address,
+                'total_staked': str(total_staked_int),
+                'rewards_claimed': str(user_doc.get('total_rewards_claimed', 0)) if user_doc else '0',
+                'active_stakes': agg_user['active_stakes']
+            })
+
+        total_top_staked = sum(int(user['total_staked']) for user in top_users_data)
+
         Metric.record(
             metric_type='top_users',
             value=len(top_users_data),
@@ -132,10 +154,10 @@ def snapshot_top_users():
                 'total_staked': str(total_top_staked)
             }
         )
-        
-        logger.info(f"✅ Top Users Snapshot: {len(top_users_data)} users, {total_top_staked} DAI")
+
+        logger.info(f"✅ Top Users Snapshot: {len(top_users_data)} users, {total_top_staked / 10**18:.2f} DAI")
         return {'status': 'success', 'count': len(top_users_data)}
-    
+
     except Exception as e:
         logger.error(f"❌ Top Users Snapshot failed: {str(e)}")
         return {'status': 'error', 'message': str(e)}

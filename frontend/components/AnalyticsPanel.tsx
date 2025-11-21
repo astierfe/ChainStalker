@@ -2,7 +2,6 @@
 'use client';
 
 import { useAnalytics } from '@/lib/hooks/useAnalytics';
-import { TVLSparklineCard } from './TVLSparklineCard';
 
 export function AnalyticsPanel() {
   const { data: analytics, isLoading, error } = useAnalytics();
@@ -67,9 +66,6 @@ export function AnalyticsPanel() {
           <div className="text-sm text-gray-400 mt-2">Across {tiers.length} tiers</div>
         </div>
       </div>
-
-      {/* TVL Sparkline - Mini Dashboard */}
-      <TVLSparklineCard />
 
       {/* Tier Distribution */}
       {tiers.length > 0 && (

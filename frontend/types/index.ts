@@ -33,6 +33,8 @@ export interface StakeTier {
   stake_count: number;
   total_staked: string;
   avg_stake_amount: string;
+  total_staked_formatted?: string;
+  avg_stake_formatted?: string;
 }
 
 export interface TierInfo {
@@ -154,4 +156,21 @@ export interface PaginatedResponse<T> {
 
 export interface ApiError {
   error: string;
+}
+
+// ============ Top Stakers Types ============
+export interface TopStaker {
+  rank: number;
+  address: string;
+  total_staked: string;
+  total_staked_formatted: string;
+  rewards_claimed: string;
+  active_stakes: number;
+}
+
+export interface TopStakersData {
+  stakers: TopStaker[];
+  count: number;
+  timestamp: string | null;
+  message?: string;
 }
