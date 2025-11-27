@@ -266,6 +266,150 @@ curl http://localhost:5000/api/analytics/contract
 }
 ```
 
+### Get Metrics History
+```bash
+# Get historical metrics (generic endpoint)
+curl "http://localhost:5000/api/analytics/history?type=tvl&hours=168&limit=500"
+
+# Get available metric types
+curl http://localhost:5000/api/analytics/history/types
+```
+
+**Response:**
+```json
+{
+  "type": "tvl",
+  "hours": 168,
+  "data_points": 336,
+  "history": [
+    {
+      "value": "500000000000000000000000",
+      "metadata": {
+        "active_stakes": 300,
+        "tvl_formatted": "500000.00 DAI"
+      },
+      "timestamp": "2025-01-20T10:30:00"
+    }
+  ]
+}
+```
+
+### Get TVL Sparkline
+```bash
+# Get TVL sparkline data for dashboard (24h, 50 points)
+curl "http://localhost:5000/api/analytics/tvl/sparkline?hours=24&points=50"
+
+# Get current TVL only
+curl http://localhost:5000/api/analytics/tvl/sparkline/current
+```
+
+**Response:**
+```json
+{
+  "current_tvl": "500000.00",
+  "current_tvl_wei": "500000000000000000000000",
+  "change_24h": 5000.50,
+  "change_percent_24h": 1.01,
+  "data_points": [
+    {
+      "timestamp": "2025-01-20T10:30:00Z",
+      "value_dai": 495000.00,
+      "value_wei": "495000000000000000000000"
+    }
+  ],
+  "period_hours": 24,
+  "points_returned": 50
+}
+```
+
+### Get Top Stakers
+```bash
+# Get top 3 stakers (default for dashboard)
+curl http://localhost:5000/api/analytics/top-stakers
+
+# Get top 20 stakers (for leaderboard)
+curl "http://localhost:5000/api/analytics/top-stakers?limit=20"
+
+# Filter by tier (optional)
+curl "http://localhost:5000/api/analytics/top-stakers?limit=10&tier_id=2"
+```
+
+**Response:**
+```json
+{
+  "stakers": [
+    {
+      "rank": 1,
+      "address": "0x...",
+      "total_staked": "100000000000000000000000",
+      "total_staked_formatted": "100,000.00 DAI",
+      "rewards_claimed": "5000000000000000000000",
+      "active_stakes": 5
+    }
+  ],
+  "count": 3,
+  "timestamp": "2025-01-20T14:30:00"
+}
+```
+
+### Get Rewards Timeline
+```bash
+# Get rewards timeline (default: 30 days)
+curl http://localhost:5000/api/analytics/rewards-timeline
+
+# Get 90 days history
+curl "http://localhost:5000/api/analytics/rewards-timeline?days=90"
+```
+
+**Response:**
+```json
+{
+  "timeline": [
+    {
+      "date": "2025-01-20",
+      "rewards_wei": "1000000000000000000000",
+      "rewards_dai": 1000.00,
+      "claim_count": 15,
+      "timestamp": "2025-01-20T15:00:00"
+    }
+  ],
+  "days": 30,
+  "data_points": 30,
+  "total_rewards_wei": "30000000000000000000000",
+  "total_rewards_dai": 30000.00,
+  "total_claims": 450
+}
+```
+
+### Get Activity Heatmap
+```bash
+# Get activity heatmap (default: 7 days)
+curl http://localhost:5000/api/analytics/activity-heatmap
+
+# Get 30 days heatmap
+curl "http://localhost:5000/api/analytics/activity-heatmap?days=30"
+```
+
+**Response:**
+```json
+{
+  "heatmap": [
+    {
+      "date": "2025-01-20",
+      "hour": 14,
+      "StakeCreated": 5,
+      "RewardsClaimed": 10,
+      "Unstaked": 2,
+      "total": 17
+    }
+  ],
+  "days_covered": 7,
+  "total_events": 500,
+  "data_points": 168,
+  "timestamp": "2025-01-20T15:00:00"
+}
+```
+
 ---
 
 ## Error Responses
@@ -295,19 +439,58 @@ curl http://localhost:5000/health
 # 2. Get analytics overview
 curl http://localhost:5000/api/analytics
 
-# 3. List users
-curl http://localhost:5000/api/users
+# 3. Get TVL sparkline (dashboard)
+curl "http://localhost:5000/api/analytics/tvl/sparkline?hours=24&points=50"
 
-# 4. Get user details and stakes
-curl http://localhost:5000/api/users/0x70997970C51812dc3A010C7d01b50e0d17dc79C8
+# 4. Get top 3 stakers (dashboard)
+curl http://localhost:5000/api/analytics/top-stakers
+
+# 5. Get full TVL history (History page)
+curl "http://localhost:5000/api/analytics/history?type=tvl&hours=168&limit=500"
+
+# 6. Get rewards timeline (History page)
+curl "http://localhost:5000/api/analytics/rewards-timeline?days=30"
+
+# 7. Get activity heatmap (History page)
+curl "http://localhost:5000/api/analytics/activity-heatmap?days=7"
+
+# 8. Get top 20 stakers leaderboard (History page)
+curl "http://localhost:5000/api/analytics/top-stakers?limit=20"
+
+# 9. List users with stakes
+curl http://localhost:5000/api/users
 curl http://localhost:5000/api/users/0x70997970C51812dc3A010C7d01b50e0d17dc79C8/stakes
 
-# 5. Filter stakes by tier
+# 10. Filter stakes by tier
 curl "http://localhost:5000/api/stakes?tier_id=1&status=active"
+```
 
-# 6. Get tier distribution
-curl http://localhost:5000/api/analytics/tiers
+---
 
-# 7. Check contract state
-curl http://localhost:5000/api/analytics/contract
+## Celery Tasks
+
+Analytics metrics are updated automatically by Celery Beat scheduler:
+
+| Task | Schedule | Description |
+|------|----------|-------------|
+| `snapshot_tvl` | Every 5 min | Records TVL and active stakes count |
+| `snapshot_users` | Every 5 min | Records user statistics |
+| `snapshot_tier_distribution` | Every 10 min | Records stake distribution by tier |
+| `snapshot_top_users` | Every 15 min | Records top 10 stakers |
+| `calculate_effective_apy` | Every 15 min | Calculates effective APY |
+| `snapshot_rewards_timeline` | Every 15 min | Aggregates daily rewards claimed (90 days) |
+| `snapshot_activity_heatmap` | Every 15 min | Aggregates hourly event activity (30 days) |
+| `cleanup_old_metrics` | Daily 3 AM | Removes metrics older than 30 days |
+
+**Manual Task Execution:**
+```bash
+# Via Celery call
+docker exec -it <celery-worker> celery -A app.tasks.celery_app call tasks.snapshot_rewards_timeline
+
+# Via Python directly (see results immediately)
+docker exec -it <celery-worker> python -c "
+from app.tasks.analytics_tasks import snapshot_rewards_timeline
+result = snapshot_rewards_timeline()
+print(result)
+"
 ```
