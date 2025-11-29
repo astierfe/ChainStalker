@@ -12,6 +12,7 @@ eth-account==0.10.0
 # Database
 pymongo==4.6.1
 motor==3.3.2
+dnspython==2.4.2
 
 # Task Queue
 celery==5.3.4
