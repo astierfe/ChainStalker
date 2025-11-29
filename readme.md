@@ -52,6 +52,12 @@ graph LR
 - StakingPool: [`0xa247e02E9309cCEB1D1b9b301607f067d0a70c28`](https://sepolia.etherscan.io/address/0xa247e02E9309cCEB1D1b9b301607f067d0a70c28)
 - DAI Token: [`0x2FA332E8337642891885453Fd40a7a7Bb010B71a`](https://sepolia.etherscan.io/address/0x2FA332E8337642891885453Fd40a7a7Bb010B71a)
 
+**Frontend Vercel**
+- https://chainstalker.vercel.app
+
+** API on Railway **
+- https://flask-api-production-8d07.up.railway.app/
+
 ## Quick Start
 
 ```bash
@@ -77,6 +83,7 @@ npm run dev
 - [API Reference](docs/api/API.md) - REST API endpoints, Celery tasks, and integration patterns
 - [Smart Contracts](docs/smart-contracts/CONTRACTS.md) - Contract architecture, staking mechanics, and ABIs
 - [Deployment Guide](docs/deployment/SEPOLIA.md) - Sepolia deployment details and Docker setup
+- [Produtcion Deployment Guide](docs/deployment/PRODUCTION.md) - Production deployment on Railway (backend) and Vercel(frontend)
 
 ## Author
 
