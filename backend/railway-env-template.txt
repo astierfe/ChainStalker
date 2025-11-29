@@ -1,0 +1,46 @@
+# ============================================
+# RAILWAY ENVIRONMENT VARIABLES TEMPLATE
+# Copy these to each Railway service via dashboard
+# ============================================
+
+# === COMMUN (TOUS LES 4 SERVICES) ===
+SECRET_KEY=prod-secret-chainstaker-railway-2024
+FLASK_ENV=production
+FLASK_DEBUG=False
+
+# Blockchain Sepolia
+RPC_URL=https://eth-sepolia.g.alchemy.com/v2/3NWC-_k0lKo09jP1siznT
+CHAIN_ID=11155111
+STAKING_POOL_ADDRESS=0xa247e02E9309cCEB1D1b9b301607f067d0a70c28
+DAI_TOKEN_ADDRESS=0x2FA332E8337642891885453Fd40a7a7Bb010B71a
+
+# Event Listener (optimized for free tier)
+START_BLOCK=9662396
+POLL_INTERVAL=5
+BATCH_SIZE=1000
+
+# Analytics
+ANALYTICS_UPDATE_INTERVAL=300
+CACHE_TTL=60
+ENABLE_NOTIFICATIONS=false
+
+# === PLUGINS RAILWAY (injectés automatiquement) ===
+# Utiliser la syntaxe ${{Plugin.VAR}} dans Railway dashboard
+MONGODB_URI=${{MongoDB.MONGO_URL}}
+MONGODB_DB_NAME=chainstaker
+
+REDIS_URL=${{Redis.REDIS_URL}}
+CELERY_BROKER_URL=${{Redis.REDIS_URL}}
+CELERY_RESULT_BACKEND=${{Redis.REDIS_URL}}
+
+# === FLASK-API UNIQUEMENT ===
+# Railway injecte automatiquement cette variable
+PORT=${{PORT}}
+
+# ============================================
+# NOTES IMPORTANTES
+# ============================================
+# 1. POLL_INTERVAL = 5s (au lieu de 2s) pour limiter requêtes RPC Alchemy
+# 2. Utiliser syntaxe ${{MongoDB.MONGO_URL}} exacte dans Railway
+# 3. PORT seulement pour flask-api service
+# 4. SECRET_KEY: générer une chaîne aléatoire pour production

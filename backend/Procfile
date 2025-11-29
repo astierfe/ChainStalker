@@ -1,0 +1,4 @@
+web: gunicorn --bind 0.0.0.0:$PORT --workers 2 --timeout 120 run:app
+worker: celery -A app.tasks.celery_app worker --loglevel=info --concurrency=2 --pool=solo
+beat: celery -A app.tasks.celery_app beat --loglevel=info
+listener: python -m app.services.blockchain_listener
